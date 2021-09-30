@@ -1,0 +1,7 @@
+
+root_domain_server: rootdc01.ansible.lab
+sub_domain_server: usdc01.us.ansible.lab
+Root_Test_Group_Path: "OU=Ansible Groups,DC=ansible,DC=lab"
+Root_Test_Group_Name: Test_Group
+
+Root_Test_Group_DN: "CN={{Root_Test_Group_Name}},{{Root_Test_Group_Path}}"

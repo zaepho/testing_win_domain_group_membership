@@ -1,0 +1,13 @@
+all:
+  children:
+    rootdc:
+      hosts:
+        rootdc01.ansible.lab
+      vars:
+        ansible_username: "ansible@ansible.lab"
+        ansible_connection: ssh
+        ansible_shell_type: powershell
+        ansible_user: "{{ domain_username }}"
+        ansible_ssh_pass: "{{ domain_password }}"
+        ansible_become_method: runas
+        ansible_become_user: Administrator

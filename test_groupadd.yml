@@ -1,0 +1,106 @@
+---
+- name: Test community.windows Group Addition
+  hosts: rootdc
+  vars_files:
+    - vars/main.yml
+    - vars/ad_creds.yml
+  tasks:
+    - name: Create Root_Test_Group
+      community.windows.win_domain_group:
+        domain_username: "{{ domain_username }}"
+        domain_password: "{{ domain_password }}"
+        domain_server: "{{ root_domain_server }}"
+        name: "{{ Root_Test_Group_Name }}"
+        path: "{{ Root_Test_Group_Path }}"
+        state: present
+        display_name: "{{ Root_Test_Group_Name }}"
+        scope: domainlocal
+        category: security
+        protect: False
+
+    # Get Domain Group, Debug to show members
+    - name: Get Root_Test_Group by DN
+      community.windows.win_domain_object_info:
+        filter: "distinguishedName -eq '{{ Root_Test_Group_DN }}'"
+        domain_username: "{{ domain_username }}"
+        domain_password: "{{ domain_password }}"
+        domain_server: "{{ root_domain_server }}"
+        properties: '*'
+      register: Root_Test_Group
+
+    - name: Output Root_Test_Group Info
+      debug:
+        var: Root_Test_Group
+
+    - name: Add Root Domain User to Root_Test_Group
+      community.windows.win_domain_group_membership:
+        domain_username: "{{domain_username}}"
+        domain_password: "{{domain_password}}"
+        domain_server: "{{root_domain_server}}"
+        name: "{{ Root_Test_Group.objects[0].Name }}"
+        members: 
+          - "ansible\\root_one"
+        state: present
+      register: TEST_Add_Root_User_To_Root_Group
+
+    - name: Add SubDomain user to Root_Test_Group
+      community.windows.win_domain_group_membership:
+        domain_username: "{{domain_username}}"
+        domain_password: "{{domain_password}}"
+        domain_server: "{{root_domain_server}}"
+        name: "{{ Root_Test_Group.objects[0].Name }}"
+        members: 
+          - "us\\test_one"
+        state: present
+      register: TEST_Add_Sub_User_To_Root_Group
+    
+    - name: Add Root Domain User to Root_Test_Group (Idempotency Test)
+      community.windows.win_domain_group_membership:
+        domain_username: "{{domain_username}}"
+        domain_password: "{{domain_password}}"
+        domain_server: "{{root_domain_server}}"
+        name: "{{ Root_Test_Group.objects[0].Name }}"
+        members: 
+          - "ansible\\root_one"
+        state: present
+      register: TEST2_Add_Root_User_To_Root_Group
+
+    - name: Add SubDomain user to Root_Test_Group (Idempotency Test)
+      community.windows.win_domain_group_membership:
+        domain_username: "{{domain_username}}"
+        domain_password: "{{domain_password}}"
+        domain_server: "{{root_domain_server}}"
+        name: "{{ Root_Test_Group.objects[0].Name }}"
+        members: 
+          - "us\\test_one"
+        state: present
+      register: TEST2_Add_Sub_User_To_Root_Group
+
+      # TODO: Get Members list and verify User DN is in the list
+    - name: "ASSERT: Root User Added to Root Group Sucessfully"
+      assert:
+        quiet: True
+        that:
+          - TEST_Add_Root_User_To_Root_Group.changed | bool == True
+      ignore_errors: True
+
+    - name: "ASSERT: Root User Added to Root Group is Idempotent"
+      assert:
+        quiet: True
+        that:
+          - TEST2_Add_Root_User_To_Root_Group.changed | bool == False
+      ignore_errors: True
+
+    - name: "ASSERT: SubDomain User Added to Root Group Sucessfully"
+      assert:
+        quiet: True
+        that:
+          - TEST_Add_Sub_User_To_Root_Group.changed | bool
+      ignore_errors: True
+
+    - name: "ASSERT: SubDomain User Added to Root Group is Idempotent"
+      assert:
+        quiet: True
+        that:
+          - TEST2_Add_Sub_User_To_Root_Group.changed | bool == False
+      ignore_errors: True
